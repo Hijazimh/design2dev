@@ -302,8 +302,7 @@ function convertSVGToReactElements(elements: SVGElement[]): UINodeType[] {
     layout: {
       display: 'flex',
       direction: 'column',
-      gap: 16,
-      padding: 24
+      gap: 16
     },
     style: {
       bg: '#ffffff',
@@ -401,7 +400,6 @@ function convertSVGToReactElements(elements: SVGElement[]): UINodeType[] {
             bg: '#3b82f6',
             color: '#ffffff',
             radius: 16,
-            padding: 8,
             fontSize: 14,
             fontWeight: '500'
           }

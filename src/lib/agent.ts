@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { UITree, PatchRequestType } from './schemas';
+import { svg_to_uiTree } from './svg';
+import { uiTree_to_react } from './codegen';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -131,4 +133,19 @@ export async function processAgentMessage(
       error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
+}
+
+/**
+ * Simple function to generate React component from SVG
+ */
+export async function generateFromSVG(svg: string, name: string) {
+  const result = await svg_to_uiTree(svg);
+  if (!result.success || !result.tree) {
+    throw new Error(result.error || 'Failed to parse SVG');
+  }
+  const codeResult = uiTree_to_react(result.tree, name);
+  if (!codeResult.success) {
+    throw new Error(codeResult.error || 'Failed to generate code');
+  }
+  return { tree: result.tree, code: codeResult.code };
 }

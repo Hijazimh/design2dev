@@ -374,8 +374,7 @@ function convertSVGToReactElements(elements: SVGElement[]): UINodeType[] {
       },
       style: {
         bg: '#f9fafb',
-        radius: 8,
-        padding: 16
+        radius: 8
       }
     };
     
@@ -440,8 +439,7 @@ export async function svg_to_uiTree(svgContent: string): Promise<SVGParseResult>
       },
       style: {
         bg: '#f9fafb',
-        radius: 8,
-        padding: 16
+        radius: 8
       },
       children: reactElements
     };

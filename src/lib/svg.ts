@@ -22,16 +22,25 @@ function sanitizeSVG(svgContent: string): string {
  * Converts SVG attributes to Tailwind classes
  */
 function svgStyleToTailwind(attrs: Record<string, any>): Partial<StyleType> {
-  const style: Partial<StyleType> = {};
-  
+  const style: Partial<StyleType> & { fontSize?: number; fontWeight?: string } = {};
+
   if (attrs.fill && attrs.fill !== 'none') {
     style.color = attrs.fill;
   }
-  
+
   if (attrs.stroke) {
     style.border = `1px solid ${attrs.stroke}`;
   }
-  
+
+  // Handle font attributes
+  if (attrs['font-size']) {
+    style.fontSize = parseFloat(attrs['font-size']);
+  }
+
+  if (attrs['font-weight']) {
+    style.fontWeight = attrs['font-weight'];
+  }
+
   return style;
 }
 
@@ -48,40 +57,67 @@ function svgLayoutToLayout(attrs: Record<string, any>): Partial<LayoutType> {
 }
 
 /**
+ * Recursively extracts text content from an element and its children
+ */
+function extractTextContent(element: any): string {
+  let content = '';
+
+  // Check if this is a text node
+  if (element.type === 'text' && element.value) {
+    return element.value;
+  }
+
+  // Check for direct text properties
+  if (element.value) {
+    content += element.value;
+  }
+
+  if (element.text) {
+    content += element.text;
+  }
+
+  // Recursively check children
+  if (element.children && Array.isArray(element.children)) {
+    for (const child of element.children) {
+      content += extractTextContent(child);
+    }
+  }
+
+  return content;
+}
+
+/**
  * Processes text elements from SVG
  */
 function processTextElement(element: any): UINodeType | null {
   if (element.name === 'text' || element.name === 'tspan') {
     console.log('Processing text element:', element);
-    
-    // Get text content from children or direct text nodes
-    let content = '';
-    if (element.children) {
-      for (const child of element.children) {
-        if (child.type === 'text') {
-          content += child.value || '';
-        }
-      }
-    }
-    
-    // If no children text, try to get from element itself
-    if (!content && element.value) {
-      content = element.value;
-    }
-    
-    // Also check for direct text content in the element
-    if (!content && element.text) {
-      content = element.text;
-    }
-    
+
+    // Extract all text content recursively
+    const content = extractTextContent(element);
+
     console.log('Text content found:', content);
-    
+
     if (content.trim()) {
+      const attrs = element.attributes || {};
+      const fontSize = attrs['font-size'] ? parseFloat(attrs['font-size']) : undefined;
+
+      // Determine the role based on font size
+      let role: 'h1' | 'h2' | 'h3' | 'p' | 'span' = 'p';
+      if (fontSize) {
+        if (fontSize >= 32) role = 'h1';
+        else if (fontSize >= 24) role = 'h2';
+        else if (fontSize >= 18) role = 'h3';
+      }
+
       return {
         type: 'Text',
-        role: 'p',
+        role,
         content: content.trim(),
-        style: svgStyleToTailwind(element.attributes || {})
+        style: {
+          ...svgStyleToTailwind(attrs),
+          ...(fontSize ? { fontSize } : {})
+        }
       };
     }
   }
@@ -422,37 +458,60 @@ function convertSVGToReactElements(elements: SVGElement[]): UINodeType[] {
 export async function svg_to_uiTree(svgContent: string): Promise<SVGParseResult> {
   try {
     console.log('Processing SVG:', svgContent.substring(0, 100) + '...');
-    
-    // Parse SVG elements
-    const elements = parseSVGElements(svgContent);
-    console.log('Parsed SVG elements:', elements);
-    
-    // Convert to React components
-    const reactElements = convertSVGToReactElements(elements);
-    console.log('Converted to React elements:', reactElements);
-    
+
+    // Sanitize the SVG first
+    const sanitized = sanitizeSVG(svgContent);
+
+    // Parse SVG using svgson
+    const parsed = await parse(sanitized);
+    console.log('Parsed SVG with svgson:', JSON.stringify(parsed, null, 2));
+
+    // Process the SVG tree into UI nodes
+    const processedNode = processSVGElement(parsed);
+    console.log('Processed SVG node:', JSON.stringify(processedNode, null, 2));
+
+    // If no node was processed, fall back to regex-based parsing
+    let children: UINodeType[] = [];
+
+    if (processedNode) {
+      // If the processed node is a Frame with children, use those children
+      if (processedNode.type === 'Frame' && processedNode.children) {
+        children = processedNode.children;
+      } else {
+        children = [processedNode];
+      }
+    }
+
+    // If we still have no children, try the regex fallback
+    if (children.length === 0) {
+      console.log('No elements found with svgson, trying regex fallback...');
+      const elements = parseSVGElements(svgContent);
+      console.log('Parsed SVG elements with regex:', elements);
+      children = convertSVGToReactElements(elements);
+    }
+
     const tree: UITreeType = {
       type: 'Frame',
       layout: {
         display: 'flex',
         direction: 'column',
-        gap: 16
+        gap: 16,
+        padding: 24
       },
       style: {
-        bg: '#f9fafb',
-        radius: 8,
-        padding: 16
+        bg: '#ffffff',
+        radius: 8
       },
-      children: reactElements
+      children
     };
-    
-    console.log('Generated UI tree:', tree);
-    
+
+    console.log('Generated UI tree:', JSON.stringify(tree, null, 2));
+
     return {
       success: true,
       tree
     };
-    
+
   } catch (error) {
     console.error('SVG parsing error:', error);
     return {

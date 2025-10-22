@@ -1,6 +1,5 @@
 import { parse } from 'svgson';
 import { UITreeType, UINodeType, LayoutType, StyleType } from './schemas';
-import DOMPurify from 'isomorphic-dompurify';
 
 export interface SVGParseResult {
   success: boolean;
@@ -9,14 +8,10 @@ export interface SVGParseResult {
 }
 
 /**
- * Sanitizes SVG content to prevent XSS attacks
+ * Note: SVG sanitization is handled client-side in the playground component
+ * using isomorphic-dompurify. Server-side parsing doesn't require sanitization
+ * since we're just extracting structure, not rendering HTML.
  */
-function sanitizeSVG(svgContent: string): string {
-  return DOMPurify.sanitize(svgContent, {
-    ADD_TAGS: ['svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'text', 'tspan', 'image'],
-    ADD_ATTR: ['viewBox', 'width', 'height', 'x', 'y', 'cx', 'cy', 'r', 'rx', 'ry', 'd', 'fill', 'stroke', 'stroke-width', 'font-family', 'font-size', 'text-anchor', 'dominant-baseline']
-  });
-}
 
 /**
  * Converts SVG attributes to Tailwind classes

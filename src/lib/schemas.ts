@@ -18,6 +18,7 @@ export const Style = z.object({
   radius: z.number().optional(),
   shadow: z.enum(["sm", "md", "lg"]).optional(),
   border: z.string().optional(),
+  padding: z.number().optional(),
 });
 
 // Text node schema

@@ -21,7 +21,7 @@ export async function POST(req: Request) {
             { name: 'removeViewBox', active: false },
             { name: 'removeDimensions', active: false },
             { name: 'removeUnknownsAndDefaults', active: false },
-            { name: 'convertStyleToAttrs', active: false }, // keep <svg style="">
+            { name: 'convertStyleToAttrs', active: true }, // Convert inline styles to attributes
           ],
         },
         expandProps: 'end', // allow passing className/width/height if you want
@@ -31,6 +31,11 @@ export async function POST(req: Request) {
         titleProp: false,
         ref: false,
         exportType: 'default', // Ensure default export
+        replaceAttrValues: {
+          // Convert common style strings to React-compatible values
+          '#000': 'currentColor',
+          '#000000': 'currentColor',
+        },
       },
       { componentName: name }
     );
@@ -38,10 +43,28 @@ export async function POST(req: Request) {
     // Ensure the component is properly defined and exported
     let normalized = code;
     
+    // Post-process to fix any remaining style string issues
+    normalized = normalized.replace(/style="([^"]*)"/g, (match, styleString) => {
+      // Convert CSS string to React style object
+      const styleObj: Record<string, string> = {};
+      const styles = styleString.split(';').filter(Boolean);
+      
+      styles.forEach((style: string) => {
+        const [property, value] = style.split(':').map((s: string) => s.trim());
+        if (property && value) {
+          // Convert kebab-case to camelCase
+          const camelProperty = property.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+          styleObj[camelProperty] = value;
+        }
+      });
+      
+      return `style={${JSON.stringify(styleObj)}}`;
+    });
+    
     // If the code doesn't contain the component definition, add it
     if (!code.includes(`function ${name}`) && !code.includes(`const ${name}`) && !code.includes(`export default function ${name}`)) {
       // Extract the JSX content and wrap it in a proper component
-      const jsxMatch = code.match(/<svg[\s\S]*<\/svg>/);
+      const jsxMatch = normalized.match(/<svg[\s\S]*<\/svg>/);
       if (jsxMatch) {
         const jsxContent = jsxMatch[0];
         normalized = `import * as React from 'react';

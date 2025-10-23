@@ -414,20 +414,54 @@ function convertSVGToReactElements(elements: SVGElement[]): UINodeType[] {
 }
 
 /**
- * Main function to convert SVG string to UI Tree
+ * Convert SVG to React component using SVGR
+ */
+export async function svg_to_react(svgContent: string, componentName: string = 'GeneratedComponent'): Promise<{ success: boolean; code?: string; error?: string }> {
+  try {
+    console.log('Converting SVG to React using SVGR...');
+    
+    const response = await fetch('/api/svg-to-react', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        svg: svgContent,
+        name: componentName
+      })
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || 'Failed to convert SVG to React'
+      };
+    }
+
+    return {
+      success: true,
+      code: result.code
+    };
+    
+  } catch (error) {
+    console.error('SVG to React conversion error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error converting SVG'
+    };
+  }
+}
+
+/**
+ * Main function to convert SVG string to UI Tree (legacy - now uses direct React conversion)
  */
 export async function svg_to_uiTree(svgContent: string): Promise<SVGParseResult> {
   try {
     console.log('Processing SVG:', svgContent.substring(0, 100) + '...');
     
-    // Parse SVG elements
-    const elements = parseSVGElements(svgContent);
-    console.log('Parsed SVG elements:', elements);
-    
-    // Convert to React components
-    const reactElements = convertSVGToReactElements(elements);
-    console.log('Converted to React elements:', reactElements);
-    
+    // For now, create a simple UI tree that will be replaced by direct React conversion
     const tree: UITreeType = {
       type: 'Frame',
       layout: {
@@ -439,7 +473,24 @@ export async function svg_to_uiTree(svgContent: string): Promise<SVGParseResult>
         bg: '#f9fafb',
         radius: 8
       },
-      children: reactElements
+      children: [
+        {
+          type: 'Text',
+          role: 'h2',
+          content: 'SVG Design',
+          style: {
+            color: '#111827'
+          }
+        },
+        {
+          type: 'Text',
+          role: 'p',
+          content: 'This SVG will be converted to a React component using SVGR.',
+          style: {
+            color: '#6b7280'
+          }
+        }
+      ]
     };
     
     console.log('Generated UI tree:', tree);

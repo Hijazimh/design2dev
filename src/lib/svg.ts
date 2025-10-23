@@ -29,7 +29,7 @@ function svgStyleToTailwind(attrs: Record<string, any>): Partial<StyleType> {
   }
   
   if (attrs.stroke) {
-    style.border = `1px solid ${attrs.stroke}`;
+    style.border = true;
   }
   
   return style;

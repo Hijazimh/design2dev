@@ -8,8 +8,7 @@ import { Input } from '@/components/ui/input';
 import CanvasPreview from '@/components/CanvasPreview';
 import CodeEditor from '@/components/CodeEditor';
 import Chat from '@/components/Chat';
-import { svg_to_uiTree, svg_to_react } from '@/lib/svg';
-import { uiTree_to_react } from '@/lib/codegen';
+// Remove old imports - we'll use the new semantic approach
 import { UITreeType, UINodeType } from '@/lib/schemas';
 
 interface Message {
@@ -47,40 +46,26 @@ export default function PlaygroundPage() {
 
     setIsLoading(true);
     try {
-      // Convert SVG directly to React using SVGR
-      const result = await svg_to_react(svgInput, componentName);
+      // Convert SVG to semantic React component
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          svg: svgInput,
+          name: componentName
+        })
+      });
+
+      const result = await response.json();
       
-      if (result.success && result.code) {
+      if (result.success) {
         setGeneratedCode(result.code);
-        
-        // Create a simple UI tree for the chat interface
-        const simpleTree: UITreeType = {
-          type: 'Frame',
-          layout: {
-            display: 'flex',
-            direction: 'column',
-            gap: 16
-          },
-          style: {
-            bg: '#f9fafb',
-            radius: 8
-          },
-          children: [
-            {
-              type: 'Text',
-              role: 'h2',
-              content: 'SVG Component',
-              style: {
-                color: '#111827'
-              }
-            }
-          ]
-        };
-        
-        setUiTree(simpleTree);
-        addMessage('assistant', 'Successfully generated React component from SVG using SVGR!');
+        setUiTree(result.tree);
+        addMessage('assistant', 'Successfully generated semantic React component from SVG!');
       } else {
-        addMessage('assistant', `Error converting SVG: ${result.error}`);
+        addMessage('assistant', `Error generating component: ${result.error}`);
       }
     } catch (error) {
       addMessage('assistant', `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`);

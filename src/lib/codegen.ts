@@ -109,9 +109,6 @@ function styleToTailwind(style: Partial<StyleType>): string[] {
   
   if (style.border) {
     classes.push('border');
-    if (style.border.includes('solid')) {
-      classes.push('border-solid');
-    }
   }
   
   // Handle additional style properties
@@ -181,16 +178,14 @@ function generateFormField(field: any, index: number): string {
  * Generates action handler code
  */
 function generateActionHandler(actions: ActionDSLType): string {
-  if (!actions?.onSubmit) return '';
+  if (!actions?.type) return '';
   
-  const { onSubmit } = actions;
-  
-  switch (onSubmit.type) {
+  switch (actions.type) {
     case 'http.post':
       return `
   const handleSubmit = async (data: FormData) => {
     try {
-      const response = await fetch('${onSubmit.url}', {
+      const response = await fetch('${actions.url}', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -206,17 +201,6 @@ function generateActionHandler(actions: ActionDSLType): string {
       console.log('Form submitted successfully');
     } catch (error) {
       console.error('Error submitting form:', error);
-    }
-  };`;
-    
-    case 'supabase.insert':
-      return `
-  const handleSubmit = async (data: FormData) => {
-    try {
-      // This would be implemented with Supabase client
-      console.log('Inserting into ${onSubmit.table}:', Object.fromEntries(data));
-    } catch (error) {
-      console.error('Error inserting data:', error);
     }
   };`;
     

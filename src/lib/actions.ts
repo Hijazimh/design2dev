@@ -16,7 +16,7 @@ export function wire_action(
   try {
     const files: Array<{ path: string; code: string }> = [];
     
-    if (!actionDSL.onSubmit) {
+    if (!actionDSL.type) {
       return {
         success: false,
         files: [],
@@ -24,23 +24,9 @@ export function wire_action(
       };
     }
 
-    const { onSubmit } = actionDSL;
-
-    switch (onSubmit.type) {
+    switch (actionDSL.type) {
       case 'http.post':
-        files.push(generateWebhookAction(onSubmit.url, context));
-        break;
-        
-      case 'openapi.op':
-        files.push(generateOpenAPIAction(onSubmit.specUrl, onSubmit.operationId, context));
-        break;
-        
-      case 'supabase.insert':
-        files.push(generateSupabaseAction(onSubmit.table, context));
-        break;
-        
-      case 'graphql.mutation':
-        files.push(generateGraphQLAction(onSubmit.endpoint, onSubmit.document, context));
+        files.push(generateWebhookAction(actionDSL.url, context));
         break;
         
       default:

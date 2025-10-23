@@ -32,7 +32,7 @@ export async function svgToUITree(svg: string): Promise<UITreeType> {
   };
 
   for (const node of ast.children ?? []) {
-    console.log('Processing node:', node.name, node.attributes);
+    console.log('Processing node:', node.name, node.attributes, 'children:', node.children?.length || 0);
     
     // Handle text elements
     if (node.name === "text") {
@@ -137,9 +137,10 @@ export async function svgToUITree(svg: string): Promise<UITreeType> {
     }
     
     // Fallback: if we have any element with text content, create a text node
-    if (!children.length && node.children) {
+    if (node.children) {
       const textContent = extractTextContent(node);
       if (textContent) {
+        console.log('Found text content:', textContent);
         children.push({
           type: "Text",
           role: "p",
@@ -152,7 +153,8 @@ export async function svgToUITree(svg: string): Promise<UITreeType> {
     }
     
     // Fallback: if we have any visual element (rect, circle, path, etc.), create a frame
-    if (!children.length && ['rect', 'circle', 'ellipse', 'path', 'polygon', 'polyline'].includes(node.name)) {
+    if (['rect', 'circle', 'ellipse', 'path', 'polygon', 'polyline', 'line', 'g'].includes(node.name)) {
+      console.log('Found visual element:', node.name);
       const bounds = getBounds(node);
       children.push({
         type: "Frame",
@@ -182,11 +184,36 @@ export async function svgToUITree(svg: string): Promise<UITreeType> {
 
   // If still no children, create a generic content frame
   if (children.length === 0) {
-    children.push({ 
-      type: "Text", 
-      role: "p", 
-      content: "SVG content detected but no recognizable elements found" 
-    });
+    console.log('No children found, creating fallback content');
+    console.log('AST children count:', ast.children?.length || 0);
+    
+    // Try to extract any text from the entire SVG
+    const allText = ast.children?.map((node: any) => {
+      if (node.children) {
+        return node.children
+          .filter((child: any) => child.type === 'text')
+          .map((child: any) => child.value)
+          .join(' ');
+      }
+      return '';
+    }).filter(Boolean).join(' ') || '';
+    
+    if (allText.trim()) {
+      children.push({
+        type: "Text",
+        role: "p",
+        content: allText.trim(),
+        style: {
+          color: "#000000"
+        }
+      });
+    } else {
+      children.push({ 
+        type: "Text", 
+        role: "p", 
+        content: `SVG with ${ast.children?.length || 0} elements detected` 
+      });
+    }
   }
 
   return { 

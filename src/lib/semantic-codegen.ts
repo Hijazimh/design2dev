@@ -24,10 +24,15 @@ function layoutToTw(layout?: any) {
 function emit(node: any, indent = 2): string {
   const pad = " ".repeat(indent);
   
+  if (!node || !node.type) {
+    return `${pad}<div>Invalid node</div>`;
+  }
+  
   if (node.type === "Text") {
     const Tag = node.role || "p";
     const styleClass = styleToTw(node.style);
-    return `${pad}<${Tag} className="${styleClass}">${node.content}</${Tag}>`;
+    const content = node.content || "Text";
+    return `${pad}<${Tag} className="${styleClass}">${content}</${Tag}>`;
   }
   
   if (node.type === "Image") {
@@ -37,6 +42,9 @@ function emit(node: any, indent = 2): string {
 
   if (node.type === "Form") {
     const fields = (node.fields ?? []).map((f: any) => {
+      if (!f || !f.name) {
+        return `${pad}  <div>Invalid field</div>`;
+      }
       const fieldId = `field-${f.name}`;
       
       if (f.component === "Input") {
@@ -126,7 +134,14 @@ ${pad}  </button>`;
   }
 
   if (node.type === "Frame") {
-    const kids = (node.children ?? []).map((k: any) => emit(k, indent + 2)).join("\n");
+    const kids = (node.children ?? []).map((k: any) => {
+      try {
+        return emit(k, indent + 2);
+      } catch (error) {
+        console.error('Error emitting child node:', error);
+        return `${pad}  <div>Error rendering child</div>`;
+      }
+    }).join("\n");
     const layoutClass = layoutToTw(node.layout);
     const styleClass = styleToTw(node.style);
     const combinedClass = [layoutClass, styleClass].filter(Boolean).join(" ");
@@ -138,9 +153,27 @@ ${pad}  </button>`;
 }
 
 export function uiTreeToReact(tree: UITreeType, name: string) {
-  const body = emit(tree, 2);
-  
-  return `import * as React from "react";
+  try {
+    const body = emit(tree, 2);
+    
+    // Validate that we have some content
+    if (!body.trim()) {
+      return `import * as React from "react";
+
+export type ${name}Props = { 
+  className?: string;
+};
+
+export default function ${name}({ className, ...props }: ${name}Props) {
+  return (
+    <div className={\`\${className || ""}\`} {...props}>
+      <p>No content generated</p>
+    </div>
+  );
+}`;
+    }
+    
+    return `import * as React from "react";
 
 export type ${name}Props = { 
   onSubmit?: (data: Record<string, any>) => void;
@@ -161,4 +194,20 @@ ${body}
     </div>
   );
 }`;
+  } catch (error) {
+    console.error('Error generating React code:', error);
+    return `import * as React from "react";
+
+export type ${name}Props = { 
+  className?: string;
+};
+
+export default function ${name}({ className, ...props }: ${name}Props) {
+  return (
+    <div className={\`\${className || ""}\`} {...props}>
+      <p>Error generating component: ${error instanceof Error ? error.message : 'Unknown error'}</p>
+    </div>
+  );
+}`;
+  }
 }

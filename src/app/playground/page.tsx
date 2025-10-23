@@ -28,7 +28,7 @@ export default function PlaygroundPage() {
     {
       id: '1',
       role: 'assistant',
-      content: 'Hello! I\'m your AI assistant. I can help you modify your React components. Try asking me to "make the button blue" or "add more spacing" after you generate a component!',
+      content: 'Hello! I\'m your AI assistant with powerful tools to help you create and modify React components. I can:\n\n• Update styling (colors, spacing, layout)\n• Add/remove elements (buttons, inputs, text)\n• Reorganize layouts (grid, flex, columns)\n• Generate new components\n• Improve accessibility\n\nTry asking me to "make the button blue", "add a form field", or "change to a grid layout" after you generate a component!',
       timestamp: new Date()
     }
   ]);
@@ -133,7 +133,7 @@ export default function PlaygroundPage() {
     setIsLoading(true);
 
     try {
-      // Call the Claude chat agent
+      // Call the enhanced Claude chat agent with tools
       const response = await fetch('/api/chat-agent', {
         method: 'POST',
         headers: {
@@ -142,7 +142,12 @@ export default function PlaygroundPage() {
         body: JSON.stringify({
           message,
           currentCode: generatedCode,
-          componentName
+          componentName,
+          context: {
+            svgFeatures: [], // Could pass SVG features if available
+            uiTree: uiTree,
+            buildPlan: null
+          }
         })
       });
 
@@ -151,15 +156,19 @@ export default function PlaygroundPage() {
       if (result.success) {
         addMessage('assistant', result.response);
         
-        // Check if the response contains updated code
-        if (result.response.includes('```') && result.response.includes('tsx')) {
-          // Extract code from response if it contains updated code
-          const codeMatch = result.response.match(/```tsx\n([\s\S]*?)\n```/);
-          if (codeMatch) {
-            const updatedCode = codeMatch[1];
-            setGeneratedCode(updatedCode);
-            addMessage('assistant', 'I\'ve updated your component with the changes you requested!');
+        // Update the generated code if Claude provided an updated version
+        if (result.updatedCode && result.updatedCode !== generatedCode) {
+          setGeneratedCode(result.updatedCode);
+          
+          // Show a success message about the changes
+          if (result.actions && result.actions.length > 0) {
+            addMessage('assistant', `✅ Applied ${result.actions.length} changes to your component!`);
           }
+        }
+        
+        // Log tool usage for debugging
+        if (result.toolsUsed > 0) {
+          console.log(`Claude used ${result.toolsUsed} tools to help you`);
         }
       } else {
         addMessage('assistant', result.error || 'Sorry, I encountered an error processing your request.');

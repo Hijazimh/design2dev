@@ -30,14 +30,40 @@ export async function POST(req: Request) {
         prettier: false,
         titleProp: false,
         ref: false,
+        exportType: 'default', // Ensure default export
       },
       { componentName: name }
     );
 
-    // Ensure default export function (nice for Sandpack)
-    const normalized = code.includes('export default')
-      ? code
-      : code + `\nexport default ${name};\n`;
+    // Ensure the component is properly defined and exported
+    let normalized = code;
+    
+    // If the code doesn't contain the component definition, add it
+    if (!code.includes(`function ${name}`) && !code.includes(`const ${name}`) && !code.includes(`export default function ${name}`)) {
+      // Extract the JSX content and wrap it in a proper component
+      const jsxMatch = code.match(/<svg[\s\S]*<\/svg>/);
+      if (jsxMatch) {
+        const jsxContent = jsxMatch[0];
+        normalized = `import * as React from 'react';
+
+interface ${name}Props {
+  className?: string;
+  width?: number | string;
+  height?: number | string;
+}
+
+export default function ${name}({ className, width, height, ...props }: ${name}Props) {
+  return (
+    ${jsxContent}
+  );
+}`;
+      }
+    }
+    
+    // Ensure default export if not present
+    if (!normalized.includes('export default')) {
+      normalized += `\nexport default ${name};\n`;
+    }
 
     return NextResponse.json({ 
       success: true,

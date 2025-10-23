@@ -46,8 +46,8 @@ export default function PlaygroundPage() {
 
     setIsLoading(true);
     try {
-      // Convert SVG to semantic React component
-      const response = await fetch('/api/generate', {
+      // Convert SVG to semantic React component using agent-based flow
+      const response = await fetch('/api/generate-from-svg', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -62,8 +62,41 @@ export default function PlaygroundPage() {
       
       if (result.success) {
         setGeneratedCode(result.code);
-        setUiTree(result.tree);
-        addMessage('assistant', 'Successfully generated semantic React component from SVG!');
+        // Create a simple UI tree for the chat interface
+        const simpleTree: UITreeType = {
+          type: 'Frame',
+          layout: {
+            display: 'flex',
+            direction: 'column',
+            gap: 16
+          },
+          style: {
+            bg: '#ffffff',
+            radius: 8,
+            shadow: 'sm'
+          },
+          children: [
+            {
+              type: 'Text',
+              role: 'h2',
+              content: 'Generated Component',
+              style: {
+                color: '#111827'
+              }
+            },
+            {
+              type: 'Text',
+              role: 'p',
+              content: `Found ${result.features?.length || 0} SVG elements`,
+              style: {
+                color: '#6b7280'
+              }
+            }
+          ]
+        };
+        
+        setUiTree(simpleTree);
+        addMessage('assistant', `Successfully generated React component using agent-based flow! Found ${result.features?.length || 0} SVG features.`);
       } else {
         addMessage('assistant', `Error generating component: ${result.error}`);
       }

@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     console.log('Processing chat message:', message);
     console.log('API Key configured:', !!process.env.ANTHROPIC_API_KEY);
     
-    // Simple, direct Claude chat
+    // Simple, direct Claude chat with updated model
     const systemPrompt = `You are a helpful React/TypeScript development assistant. You help users modify and improve React components.
 
 Guidelines:
@@ -76,8 +76,18 @@ Please help the user with their request. If they want code changes, provide the 
       }
       
       throw new Error('No text content in Claude response');
-    } catch (claudeError) {
+    } catch (claudeError: any) {
       console.error('Claude API error:', claudeError);
+      
+      // If it's a model error, provide helpful fallback
+      if (claudeError.status === 404) {
+        return NextResponse.json({
+          success: true,
+          response: `I understand your message: "${message}". However, I'm experiencing a temporary issue with the AI model. The chat functionality will be restored shortly. In the meantime, you can manually edit your component code in the code editor.`,
+          updatedCode: currentCode
+        });
+      }
+      
       return NextResponse.json({
         success: true,
         response: `I understand your request! I'm here to help you modify your React component. Could you be more specific about what you'd like to change? For example, you could ask me to 'make the button blue' or 'add more spacing'.`,

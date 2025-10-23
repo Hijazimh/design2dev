@@ -24,7 +24,14 @@ export default function PlaygroundPage() {
   const [uiTree, setUiTree] = useState<UITreeType | null>(null);
   const [generatedCode, setGeneratedCode] = useState('');
   const [componentName, setComponentName] = useState('GeneratedComponent');
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      role: 'assistant',
+      content: 'Hello! I\'m your AI assistant. I can help you modify your React components. Try asking me to "make the button blue" or "add more spacing" after you generate a component!',
+      timestamp: new Date()
+    }
+  ]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'svg' | 'figma'>('svg');
   const [activeViewTab, setActiveViewTab] = useState<'preview' | 'code'>('preview');
@@ -144,17 +151,22 @@ export default function PlaygroundPage() {
       if (result.success) {
         addMessage('assistant', result.response);
         
-        // If patches were applied, update the generated code
-        if (result.patches && result.patches.length > 0) {
-          // In a real implementation, you'd apply the patches to the code
-          // For now, just show that changes were made
-          console.log('Applied patches:', result.patches);
+        // Check if the response contains updated code
+        if (result.response.includes('```') && result.response.includes('tsx')) {
+          // Extract code from response if it contains updated code
+          const codeMatch = result.response.match(/```tsx\n([\s\S]*?)\n```/);
+          if (codeMatch) {
+            const updatedCode = codeMatch[1];
+            setGeneratedCode(updatedCode);
+            addMessage('assistant', 'I\'ve updated your component with the changes you requested!');
+          }
         }
       } else {
-        addMessage('assistant', result.response || 'Sorry, I encountered an error processing your request.');
+        addMessage('assistant', result.error || 'Sorry, I encountered an error processing your request.');
       }
     } catch (error) {
-      addMessage('assistant', 'Sorry, I encountered an error processing your request.');
+      console.error('Chat error:', error);
+      addMessage('assistant', 'Sorry, I encountered an error processing your request. Please try again.');
     } finally {
       setIsLoading(false);
     }

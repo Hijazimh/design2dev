@@ -28,6 +28,7 @@ export default function PlaygroundPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'svg' | 'figma'>('svg');
+  const [activeViewTab, setActiveViewTab] = useState<'preview' | 'code'>('preview');
 
   const generateId = () => Math.random().toString(36).substr(2, 9);
 
@@ -148,7 +149,7 @@ export default function PlaygroundPage() {
           <p className="text-gray-600">Transform your designs into React components with AI assistance</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Column - Input */}
           <div className="space-y-6">
             <Card className="p-6">
@@ -229,43 +230,71 @@ export default function PlaygroundPage() {
             />
           </div>
 
-          {/* Center Column - Preview */}
+          {/* Right Column - Preview & Code with Tabs */}
           <div className="space-y-6">
             <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Live Preview</h2>
-              <CanvasPreview
-                files={files}
-                componentName={componentName}
-                className="min-h-96"
-              />
-            </Card>
-          </div>
-
-          {/* Right Column - Code */}
-          <div className="space-y-6">
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Generated Code</h2>
-              <CodeEditor
-                code={generatedCode}
-                onChange={handleCodeChange}
-                onApplyPatch={handleApplyPatch}
-                className="min-h-96"
-              />
-            </Card>
-
-            <Card className="p-6">
-              <h3 className="font-semibold mb-4">Export Options</h3>
-              <div className="space-y-2">
-                <Button variant="outline" className="w-full" size="sm">
-                  Download TSX
+              <div className="flex space-x-2 mb-4">
+                <Button
+                  variant={activeViewTab === 'preview' ? 'default' : 'outline'}
+                  onClick={() => setActiveViewTab('preview')}
+                  size="sm"
+                >
+                  Preview
                 </Button>
-                <Button variant="outline" className="w-full" size="sm">
-                  Generate Next.js Route
-                </Button>
-                <Button variant="outline" className="w-full" size="sm">
-                  Wire Actions
+                <Button
+                  variant={activeViewTab === 'code' ? 'default' : 'outline'}
+                  onClick={() => setActiveViewTab('code')}
+                  size="sm"
+                >
+                  Code
                 </Button>
               </div>
+
+              {activeViewTab === 'preview' ? (
+                <div>
+                  <h2 className="text-xl font-semibold mb-4">Live Preview</h2>
+                  <CanvasPreview
+                    files={files}
+                    componentName={componentName}
+                    className="min-h-96"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-semibold">Generated Code</h2>
+                    <Button 
+                      onClick={handleApplyPatch}
+                      size="sm"
+                      variant="outline"
+                    >
+                      Apply Changes
+                    </Button>
+                  </div>
+                  <CodeEditor
+                    code={generatedCode}
+                    onChange={handleCodeChange}
+                    onApplyPatch={handleApplyPatch}
+                    className="min-h-96"
+                  />
+                  
+                  {/* Export Options */}
+                  <div className="mt-6">
+                    <h3 className="font-semibold mb-4">Export Options</h3>
+                    <div className="grid grid-cols-1 gap-2">
+                      <Button variant="outline" className="w-full" size="sm">
+                        Download TSX
+                      </Button>
+                      <Button variant="outline" className="w-full" size="sm">
+                        Generate Next.js Route
+                      </Button>
+                      <Button variant="outline" className="w-full" size="sm">
+                        Wire Actions
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </Card>
           </div>
         </div>

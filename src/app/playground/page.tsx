@@ -126,18 +126,32 @@ export default function PlaygroundPage() {
     setIsLoading(true);
 
     try {
-      // This would call the agent API
-      // For now, simulate a response
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call the Claude chat agent
+      const response = await fetch('/api/chat-agent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message,
+          currentCode: generatedCode,
+          componentName
+        })
+      });
+
+      const result = await response.json();
       
-      if (message.toLowerCase().includes('radius')) {
-        addMessage('assistant', 'I\'ll increase the border radius for you!');
-        // Here you would apply an AST patch
-      } else if (message.toLowerCase().includes('grid')) {
-        addMessage('assistant', 'Switching to grid layout with 2 columns!');
-        // Here you would apply an AST patch
+      if (result.success) {
+        addMessage('assistant', result.response);
+        
+        // If patches were applied, update the generated code
+        if (result.patches && result.patches.length > 0) {
+          // In a real implementation, you'd apply the patches to the code
+          // For now, just show that changes were made
+          console.log('Applied patches:', result.patches);
+        }
       } else {
-        addMessage('assistant', 'I understand you want to modify the design. The AST patch system is being implemented!');
+        addMessage('assistant', result.response || 'Sorry, I encountered an error processing your request.');
       }
     } catch (error) {
       addMessage('assistant', 'Sorry, I encountered an error processing your request.');

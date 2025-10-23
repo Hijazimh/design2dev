@@ -3,15 +3,56 @@ import type { UITreeType } from "./schemas";
 
 /** Convert SVG to semantic UI Tree using heuristics */
 export async function svgToUITree(svg: string): Promise<UITreeType> {
+  console.log('Parsing SVG:', svg.substring(0, 200) + '...');
+  
   const ast = await parse(svg);
+  console.log('Parsed AST:', JSON.stringify(ast, null, 2));
+  
   const children: any[] = [];
 
+  // Helper function to extract text content from any element
+  const extractTextContent = (node: any): string => {
+    if (node.children && node.children.length > 0) {
+      return node.children
+        .filter((child: any) => child.type === 'text')
+        .map((child: any) => child.value)
+        .join(' ')
+        .trim();
+    }
+    return '';
+  };
+
+  // Helper function to get element bounds for positioning
+  const getBounds = (node: any) => {
+    const x = parseFloat(node.attributes?.x || '0');
+    const y = parseFloat(node.attributes?.y || '0');
+    const width = parseFloat(node.attributes?.width || '0');
+    const height = parseFloat(node.attributes?.height || '0');
+    return { x, y, width, height };
+  };
+
   for (const node of ast.children ?? []) {
+    console.log('Processing node:', node.name, node.attributes);
+    
+    // Handle text elements
     if (node.name === "text") {
-      const content = node.children?.[0]?.value ?? "Text";
+      const content = extractTextContent(node) || node.children?.[0]?.value || "Text";
       children.push({ 
         type: "Text", 
         role: "p", 
+        content,
+        style: {
+          color: node.attributes.fill || "#000000"
+        }
+      });
+    }
+    
+    // Handle tspan elements (text spans)
+    if (node.name === "tspan") {
+      const content = extractTextContent(node) || node.children?.[0]?.value || "Text";
+      children.push({ 
+        type: "Text", 
+        role: "span", 
         content,
         style: {
           color: node.attributes.fill || "#000000"
@@ -94,13 +135,57 @@ export async function svgToUITree(svg: string): Promise<UITreeType> {
         });
       }
     }
+    
+    // Fallback: if we have any element with text content, create a text node
+    if (!children.length && node.children) {
+      const textContent = extractTextContent(node);
+      if (textContent) {
+        children.push({
+          type: "Text",
+          role: "p",
+          content: textContent,
+          style: {
+            color: node.attributes.fill || "#000000"
+          }
+        });
+      }
+    }
+    
+    // Fallback: if we have any visual element (rect, circle, path, etc.), create a frame
+    if (!children.length && ['rect', 'circle', 'ellipse', 'path', 'polygon', 'polyline'].includes(node.name)) {
+      const bounds = getBounds(node);
+      children.push({
+        type: "Frame",
+        layout: {
+          display: "flex",
+          direction: "column",
+          gap: 8,
+          padding: 12
+        },
+        style: {
+          bg: node.attributes.fill || "#f0f0f0",
+          radius: 4,
+          shadow: "sm",
+          border: !!node.attributes.stroke
+        },
+        children: [{
+          type: "Text",
+          role: "p",
+          content: `${node.name} element`,
+          style: {
+            color: node.attributes.stroke || "#666666"
+          }
+        }]
+      });
+    }
   }
 
+  // If still no children, create a generic content frame
   if (children.length === 0) {
     children.push({ 
       type: "Text", 
       role: "p", 
-      content: "Parsed empty SVG" 
+      content: "SVG content detected but no recognizable elements found" 
     });
   }
 

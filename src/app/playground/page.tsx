@@ -133,7 +133,10 @@ export default function PlaygroundPage() {
     setIsLoading(true);
 
     try {
-      // Call the enhanced Claude chat agent with tools
+      console.log('Sending chat message:', message);
+      console.log('Current code length:', generatedCode.length);
+      
+      // Call the simplified Claude chat agent
       const response = await fetch('/api/chat-agent', {
         method: 'POST',
         headers: {
@@ -142,35 +145,25 @@ export default function PlaygroundPage() {
         body: JSON.stringify({
           message,
           currentCode: generatedCode,
-          componentName,
-          context: {
-            svgFeatures: [], // Could pass SVG features if available
-            uiTree: uiTree,
-            buildPlan: null
-          }
+          componentName
         })
       });
 
+      console.log('Chat response status:', response.status);
       const result = await response.json();
+      console.log('Chat response:', result);
       
       if (result.success) {
         addMessage('assistant', result.response);
         
         // Update the generated code if Claude provided an updated version
         if (result.updatedCode && result.updatedCode !== generatedCode) {
+          console.log('Updating code with Claude response');
           setGeneratedCode(result.updatedCode);
-          
-          // Show a success message about the changes
-          if (result.actions && result.actions.length > 0) {
-            addMessage('assistant', `✅ Applied ${result.actions.length} changes to your component!`);
-          }
-        }
-        
-        // Log tool usage for debugging
-        if (result.toolsUsed > 0) {
-          console.log(`Claude used ${result.toolsUsed} tools to help you`);
+          addMessage('assistant', '✅ I\'ve updated your component with the changes you requested!');
         }
       } else {
+        console.error('Chat error:', result.error);
         addMessage('assistant', result.error || 'Sorry, I encountered an error processing your request.');
       }
     } catch (error) {
